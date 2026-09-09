@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Générateur de topologie — Système d'information</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="toolbar">
+  <div class="brand">Générateur de topologie SI</div>
+  <input id="topo-title" type="text" placeholder="Titre de la topologie" title="Titre de la topologie (conservé dans le JSON)">
+  <div class="actions">
+    <button id="btn-undo" disabled title="Annuler la dernière action (Ctrl+Z)">Annuler</button>
+    <button id="btn-redo" disabled title="Rétablir l'action annulée (Ctrl+Y)">Rétablir</button>
+    <span class="sep"></span>
+    <button id="btn-fit" title="Ajuster la vue à toute la topologie (F2)">Ajuster</button>
+    <button id="btn-grid" title="Calage des éléments sur une grille (pas de 20 px)">Grille</button>
+    <span class="sep"></span>
+    <button id="btn-save" title="Sauvegarder la topologie dans un fichier JSON">Sauvegarder JSON</button>
+    <button id="btn-import" title="Importer une topologie depuis un fichier JSON">Importer JSON</button>
+    <button id="btn-export" title="Exporter la topologie en fichier JPEG">Exporter JPEG</button>
+    <button id="btn-theme" title="Changer la couleur de fond">Fond : blanc</button>
+    <button id="btn-lang" title="Passer en anglais">English</button>
+    <span class="sep"></span>
+    <button id="btn-anim-mode" title="Activer le mode animation du trafic">Mode animation</button>
+    <button id="btn-anim-start" title="Démarrer l'animation du trafic" disabled>Démarrer</button>
+    <button id="btn-anim-stop" title="Arrêter l'animation du trafic" disabled>Arrêter</button>
+    <span class="sep"></span>
+    <span class="search">
+      <input id="search" type="text" placeholder="Rechercher un élément…" title="Rechercher un élément (Entrée : suivant)">
+      <span id="search-count"></span>
+    </span>
+    <button id="btn-clear" class="danger" title="Effacer toute la topologie">Tout effacer</button>
+  </div>
+</header>
+
+<main id="stage">
+  <div id="vis"></div>
+  <canvas id="fx"></canvas>
+</main>
+
+<footer id="statusbar">
+  <span id="status"></span>
+  <div id="legend">
+    <span class="chip"><i style="background:#38bdf8"></i><span class="llabel" data-key="link.fiber10.short">10G fibre</span></span>
+    <span class="chip"><i style="background:#1d4ed8"></i><span class="llabel" data-key="link.fiber1.short">1G fibre</span></span>
+    <span class="chip"><i style="background:#86efac"></i><span class="llabel" data-key="link.rj45_10.short">10G RJ45</span></span>
+    <span class="chip"><i style="background:#15803d"></i><span class="llabel" data-key="link.rj45_1.short">1G RJ45</span></span>
+    <span class="chip"><i style="background:#9ca3af"></i><span class="llabel" data-key="link.rj45_g.short">1G RJ45 gris</span></span>
+    <span class="chip"><i class="dash" style="background:repeating-linear-gradient(90deg,#a855f7 0 4px,transparent 4px 7px)"></i><span class="llabel" data-key="link.dashed.short">pointillé</span></span>
+  </div>
+</footer>
+
+<input type="file" id="file-import" accept=".json,application/json" hidden>
+<div id="menu" class="hidden"></div>
+
+<script src="js/vis/vis-network.min.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
