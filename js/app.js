@@ -8,10 +8,12 @@
  * - déplacement des éléments par glisser-déposer (drag & drop natif vis.js)
  * - sélection (clic, Maj+clic, rectangle Maj+glisser) et Suppr au clavier
  * - lien par Alt+glisser d'un élément vers un autre
- * - annuler / rétablir (Ctrl+Z / Ctrl+Y), ajuster la vue (F2), grille de calage
+ * - annuler / rétablir (Ctrl+Z / Ctrl+Y), copier / coller (Ctrl+C / Ctrl+V),
+ *   ajuster la vue (F2), grille de calage
  * - recherche d'élément, titre personnalisable
  * - groupes / sous-réseaux (rectangles), renumérotation des éléments d'un type
  * - sauvegarde / import JSON, export JPEG, fond noir / blanc, FR / EN
+ * - visualisation 3D (three.js) : rotation à la souris, zoom molette
  * - animation du trafic réseau sur les éléments sélectionnés
  * ============================================================ */
 
@@ -41,6 +43,7 @@ const DEVICE_TYPES = {
   usb:        { icon: window.TopoIcons.usb },
   printer:    { icon: window.TopoIcons.printer },
   bay:        { icon: window.TopoIcons.bay },
+  text:       { icon: window.TopoIcons.text, textOnly: true },
 };
 
 /* ===== Internationalisation (FR / EN) ===== */
@@ -50,7 +53,7 @@ const I18N = {
     brand: "Générateur de topologie SI",
     langName: "français",
     bg: { light: "blanc", dark: "noir" },
-    device: { switch: "Switch", firewall: "Firewall", server: "Serveur", nas: "NAS", vm: "Machine virtuelle", router: "Routeur", vm_linux: "VM Linux", vm_windows: "VM Windows", cloud: "Cloud", internet: "Internet", hdd: "Disque dur", usb: "Clé USB", printer: "Imprimante", bay: "Baie" },
+    device: { switch: "Switch", firewall: "Firewall", server: "Serveur", nas: "NAS", vm: "Machine virtuelle", router: "Routeur", vm_linux: "VM Linux", vm_windows: "VM Windows", cloud: "Cloud", internet: "Internet", hdd: "Disque dur", usb: "Clé USB", printer: "Imprimante", bay: "Baie", text: "Texte" },
     link: {
       fiber10: { label: "Lien 10 Gb/s fibre optique", short: "10G fibre" },
       fiber1:  { label: "Lien 1 Gb/s fibre optique",  short: "1G fibre" },
@@ -69,6 +72,7 @@ const I18N = {
       export: "Exporter JPEG", exportTitle: "Exporter la topologie en fichier JPEG",
       themeTitle: "Changer la couleur de fond", themeLight: "Fond : blanc", themeDark: "Fond : noir",
       lang: "English", langTitle: "Passer en anglais",
+      view3d: "3D", view3dTitle: "Basculer la visualisation 3D (Échap : retour en 2D)",
       animMode: "Mode animation", animModeTitle: "Activer le mode animation du trafic",
       animStart: "Démarrer", animStartTitle: "Démarrer l'animation du trafic",
       animStop: "Arrêter", animStopTitle: "Arrêter l'animation du trafic",
@@ -87,9 +91,11 @@ const I18N = {
       newGroup: "Nouveau groupe",
       renameGroup: "Renommer ce groupe",
       removeGroup: "Supprimer ce groupe",
+      copyNode: "Copier cet élément",
+      paste: "Coller ici",
     },
     status: {
-      initial: "Clic droit : ajouter un élément ou un lien · Glisser : déplacer · Maj+glisser : sélection rectangulaire · Alt+glisser d'un élément à l'autre : lien · Suppr : supprimer la sélection · Ctrl+Z / Ctrl+Y : annuler / rétablir · F2 : ajuster la vue.",
+      initial: "Clic droit : ajouter un élément ou un lien · Glisser : déplacer · Maj+glisser : sélection rectangulaire · Alt+glisser d'un élément à l'autre : lien · Suppr : supprimer la sélection · Ctrl+C / Ctrl+V : copier / coller la sélection · Ctrl+Z / Ctrl+Y : annuler / rétablir · F2 : ajuster la vue.",
       added: "Élément ajouté : {label}",
       linkCreated: "Lien créé : {label}",
       linkChanged: "Lien modifié : {label}",
@@ -109,6 +115,8 @@ const I18N = {
       animModeOff: "Mode animation désactivé.",
       animRunning: "Animation du trafic en cours. Bouton « Arrêter » pour stopper.",
       langChanged: "Langue : {lang}",
+      view3dOn: "Vue 3D : glisser pour pivoter · molette pour zoomer · Échap pour revenir en 2D.",
+      view3dOff: "Retour à la vue 2D.",
       undone: "Action annulée.",
       redone: "Action rétablie.",
       gridOn: "Grille : calage actif (pas de 20 px).",
@@ -120,15 +128,23 @@ const I18N = {
       groupResized: "Groupe redimensionné.",
       renumbered: "Renumérotation appliquée : {label}.",
       searchNone: "Aucun élément trouvé.",
+      copied: "{n} élément(s) copié(s).",
+      pasted: "{n} élément(s) collé(s).",
+      pasteEmpty: "Rien à coller.",
     },
     dlg: {
       clearConfirm: "Effacer toute la topologie ?",
       renameNode: "Nouveau nom de l'élément :",
+      textContent: "Texte à afficher :",
+      ok: "OK",
+      cancel: "Annuler",
+      textHint: "Entrée : nouvelle ligne · Ctrl+Entrée : valider",
       renameEdge: "Nouveau nom du lien :",
       groupName: "Nom du groupe :",
       noPath: "Aucun chemin réseau entre « {a} » et « {b} ».",
       invalidJson: "Fichier JSON invalide : {msg}",
       exportImpossible: "Export impossible.",
+      no3D: "Bibliothèque 3D absente : js/three/three.min.js.",
     },
     search: { ph: "Rechercher un élément…" },
     title: { ph: "Titre de la topologie" },
@@ -140,7 +156,7 @@ const I18N = {
     brand: "IT topology generator",
     langName: "English",
     bg: { light: "white", dark: "black" },
-    device: { switch: "Switch", firewall: "Firewall", server: "Server", nas: "NAS", vm: "Virtual machine", router: "Router", vm_linux: "Linux VM", vm_windows: "Windows VM", cloud: "Cloud", internet: "Internet", hdd: "Hard drive", usb: "USB drive", printer: "Printer", bay: "Enclosure" },
+    device: { switch: "Switch", firewall: "Firewall", server: "Server", nas: "NAS", vm: "Virtual machine", router: "Router", vm_linux: "Linux VM", vm_windows: "Windows VM", cloud: "Cloud", internet: "Internet", hdd: "Hard drive", usb: "USB drive", printer: "Printer", bay: "Enclosure", text: "Text" },
     link: {
       fiber10: { label: "10 Gb/s fiber optic link", short: "10G fiber" },
       fiber1:  { label: "1 Gb/s fiber optic link",  short: "1G fiber" },
@@ -159,6 +175,7 @@ const I18N = {
       export: "Export JPEG", exportTitle: "Export the topology to a JPEG file",
       themeTitle: "Change the background color", themeLight: "Background: white", themeDark: "Background: black",
       lang: "Français", langTitle: "Switch to French",
+      view3d: "3D", view3dTitle: "Toggle the 3D view (Escape: back to 2D)",
       animMode: "Animation mode", animModeTitle: "Enable traffic animation mode",
       animStart: "Start", animStartTitle: "Start the traffic animation",
       animStop: "Stop", animStopTitle: "Stop the traffic animation",
@@ -177,9 +194,11 @@ const I18N = {
       newGroup: "New group",
       renameGroup: "Rename this group",
       removeGroup: "Remove this group",
+      copyNode: "Copy this element",
+      paste: "Paste here",
     },
     status: {
-      initial: "Right-click: add an element or a link · Drag: move · Shift+drag: box selection · Alt+drag from one element to another: link · Del: delete selection · Ctrl+Z / Ctrl+Y: undo / redo · F2: fit view.",
+      initial: "Right-click: add an element or a link · Drag: move · Shift+drag: box selection · Alt+drag from one element to another: link · Del: delete selection · Ctrl+C / Ctrl+V: copy / paste selection · Ctrl+Z / Ctrl+Y: undo / redo · F2: fit view.",
       added: "Element added: {label}",
       linkCreated: "Link created: {label}",
       linkChanged: "Link changed: {label}",
@@ -199,6 +218,8 @@ const I18N = {
       animModeOff: "Animation mode disabled.",
       animRunning: "Traffic animation running. Use the “Stop” button to stop.",
       langChanged: "Language: {lang}",
+      view3dOn: "3D view: drag to orbit · wheel to zoom · Escape to go back to 2D.",
+      view3dOff: "Back to the 2D view.",
       undone: "Action undone.",
       redone: "Action redone.",
       gridOn: "Grid: snapping on (20 px step).",
@@ -210,15 +231,23 @@ const I18N = {
       groupResized: "Group resized.",
       renumbered: "Renumbering applied: {label}.",
       searchNone: "No element found.",
+      copied: "{n} element(s) copied.",
+      pasted: "{n} element(s) pasted.",
+      pasteEmpty: "Nothing to paste.",
     },
     dlg: {
       clearConfirm: "Clear the entire topology?",
       renameNode: "New name for the element:",
+      textContent: "Text to display:",
+      ok: "OK",
+      cancel: "Cancel",
+      textHint: "Enter: new line · Ctrl+Enter: validate",
       renameEdge: "New name for the link:",
       groupName: "Name of the group:",
       noPath: "No network path between “{a}” and “{b}”.",
       invalidJson: "Invalid JSON file: {msg}",
       exportImpossible: "Export impossible.",
+      no3D: "3D library missing: js/three/three.min.js.",
     },
     search: { ph: "Search an element…" },
     title: { ph: "Topology title" },
@@ -252,7 +281,7 @@ let network = null;
 let nodesDS = null;
 let edgesDS = null;
 let nextId = 1;
-const counters = { switch: 0, firewall: 0, server: 0, nas: 0, vm: 0, router: 0, vm_linux: 0, vm_windows: 0, cloud: 0, internet: 0, hdd: 0, usb: 0, printer: 0, bay: 0 };
+const counters = { switch: 0, firewall: 0, server: 0, nas: 0, vm: 0, router: 0, vm_linux: 0, vm_windows: 0, cloud: 0, internet: 0, hdd: 0, usb: 0, printer: 0, bay: 0, text: 0 };
 let theme = 'light';
 let linking = { active: false, source: null };
 const anim = { mode: false, selected: [], running: false, startTime: 0, segments: [], highlighted: [] };
@@ -303,10 +332,16 @@ const btnUndo = $('btn-undo');
 const btnRedo = $('btn-redo');
 const btnFit = $('btn-fit');
 const btnGrid = $('btn-grid');
+const btn3d = $('btn-3d');
 const fileInput = $('file-import');
 const searchInput = $('search');
 const searchCount = $('search-count');
 const titleInput = $('topo-title');
+const dlgEl = $('dlg');
+const dlgTitle = $('dlg-title');
+const dlgInput = $('dlg-input');
+const dlgOk = $('dlg-ok');
+const dlgCancel = $('dlg-cancel');
 
 const RING_COLOR = '#22d3ee';
 const RING_RADIUS = 44;
@@ -474,6 +509,14 @@ function init() {
   window.addEventListener('scroll', closeMenu, true);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (!dlgEl.classList.contains('hidden')) {
+        closeDlg(null);
+        return;
+      }
+      if (view3d) {
+        exit3D();
+        return;
+      }
       if (e.target === searchInput) {
         searchInput.value = '';
         onSearchInput();
@@ -496,6 +539,11 @@ function init() {
     } else if (e.key === 'F2') {
       e.preventDefault();
       fitToScreen();
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C')) {
+      copyNodes(network.getSelectedNodes());
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'v' || e.key === 'V')) {
+      e.preventDefault();
+      pasteAt(network.getViewPosition());
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       deleteSelection();
@@ -516,6 +564,7 @@ function init() {
   btnRedo.onclick = redo;
   btnFit.onclick = fitToScreen;
   btnGrid.onclick = toggleGrid;
+  btn3d.onclick = toggle3D;
   fileInput.onchange = onImportFile;
   searchInput.addEventListener('input', onSearchInput);
   searchInput.addEventListener('keydown', (e) => {
@@ -537,6 +586,19 @@ function init() {
       pushHistory();
       topoTitle = v;
       updateDocTitle();
+    }
+  });
+
+  /* Fenêtre de saisie texte multiligne */
+  dlgOk.onclick = () => closeDlg(dlgInput.value);
+  dlgCancel.onclick = () => closeDlg(null);
+  dlgEl.onclick = (e) => {
+    if (e.target === dlgEl) closeDlg(null); // clic hors du panneau : annuler
+  };
+  dlgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      closeDlg(dlgInput.value);
     }
   });
 
@@ -566,6 +628,7 @@ function applyTheme() {
 function toggleTheme() {
   theme = theme === 'dark' ? 'light' : 'dark';
   applyTheme();
+  refresh3D();
   setStatus('status.theme', { color: t('bg.' + theme) });
 }
 
@@ -588,6 +651,10 @@ function applyLang() {
   setBtnText('btn-anim-stop', 'btn.animStop', 'btn.animStopTitle');
   setBtnText('btn-clear', 'btn.clear', 'btn.clearTitle');
   setBtnText('btn-lang', 'btn.lang', 'btn.langTitle');
+  setBtnText('btn-3d', 'btn.view3d', 'btn.view3dTitle');
+  setBtnText('dlg-ok', 'dlg.ok');
+  setBtnText('dlg-cancel', 'dlg.cancel');
+  dlgInput.title = t('dlg.textHint');
   searchInput.placeholder = t('search.ph');
   titleInput.placeholder = t('title.ph');
   const btnTheme = document.getElementById('btn-theme');
@@ -627,25 +694,65 @@ function toggleLang() {
   setStatus('status.langChanged', { lang: t('langName') });
 }
 
+/* ===== Dialogue texte multiligne (éléments « Texte ») ===== */
+/* prompt() ne permet pas les retours à la ligne : une modale avec <textarea>
+ * sert à la saisie et au renommage des éléments de type « texte ». */
+let dlgCb = null;
+
+function askText(title, initial, cb) {
+  closeDlg(null); /* annule une saisie précédente éventuellement ouverte */
+  dlgTitle.textContent = title;
+  dlgInput.value = initial || '';
+  dlgCb = cb;
+  dlgEl.classList.remove('hidden');
+  dlgInput.focus();
+  dlgInput.select();
+}
+
+function closeDlg(value) {
+  dlgEl.classList.add('hidden');
+  const cb = dlgCb;
+  dlgCb = null;
+  if (cb) cb(value);
+}
+
 /* ===== Ajout / suppression d'éléments et de liens ===== */
+/* Rendu d'un nœud : icône pour les appareils, pur texte pour l'annotation */
+function nodeVisual(type) {
+  const d = DEVICE_TYPES[type];
+  return d && d.textOnly ? { shape: 'text' } : { image: d ? d.icon : DEVICE_TYPES.server.icon };
+}
+
 function addDevice(type, worldPos) {
+  if (DEVICE_TYPES[type].textOnly) {
+    askText(t('dlg.textContent'), '', (txt) => {
+      if (txt === null) return; // annulé : rien n'est ajouté
+      addDeviceCore(type, worldPos, String(txt).trim() || null);
+    });
+    return null; // l'ajout est différé jusqu'à la validation de la fenêtre
+  }
+  return addDeviceCore(type, worldPos, null);
+}
+
+function addDeviceCore(type, worldPos, name) {
   pushHistory();
   const d = DEVICE_TYPES[type];
   counters[type] += 1;
   const num = counters[type];
   const id = 'n' + nextId++;
   const sp = snapPos(worldPos);
+  const label = name != null ? name : nodeLabel(type, num);
   nodesDS.add({
     id,
     type,
     num,
-    name: null,
-    label: nodeLabel(type, num),
-    image: d.icon,
+    name,
+    label,
+    ...nodeVisual(type),
     x: sp.x,
     y: sp.y,
   });
-  setStatus('status.added', { label: nodeLabel(type, num) });
+  setStatus('status.added', { label });
   return id;
 }
 
@@ -661,8 +768,19 @@ function renameNode(id) {
   const n = nodesDS.get(id);
   if (!n) return;
   const current = n.name != null ? n.name : n.label;
-  const newName = prompt(t('dlg.renameNode'), current);
+  if (n.type && DEVICE_TYPES[n.type] && DEVICE_TYPES[n.type].textOnly) {
+    /* éléments « texte » : saisie multiligne */
+    askText(t('dlg.renameNode'), current, (newName) => applyRenameNode(id, newName));
+    return;
+  }
+  applyRenameNode(id, prompt(t('dlg.renameNode'), current));
+}
+
+function applyRenameNode(id, newName) {
   if (newName === null) return; // annulé
+  const n = nodesDS.get(id);
+  if (!n) return;
+  const current = n.name != null ? n.name : n.label;
   const trimmed = String(newName).trim();
   if (trimmed === '') {
     /* nom vide : retour au libellé par défaut */
@@ -740,6 +858,45 @@ function deleteSelection() {
   setStatus(nIds.length ? 'status.removed' : 'status.edgeRemoved');
 }
 
+/* ===== Copier / coller d'éléments ===== */
+/* Le presse-papiers interne mémorise les éléments copiés (type, libellé
+ * personnalisé, positions relatives) ; la collée recrée de nouveaux éléments
+ * (numéros incrémentés pour les libellés par défaut). */
+let clipboard = [];
+
+function copyNodes(ids) {
+  const nodes = ids.map((id) => nodesDS.get(id)).filter(Boolean);
+  if (!nodes.length) return;
+  clipboard = nodes.map((n) => {
+    const p = network.getPosition(n.id) || n;
+    return { type: n.type, name: n.name, x: p.x, y: p.y };
+  });
+  setStatus('status.copied', { n: clipboard.length });
+}
+
+function pasteAt(worldPos) {
+  if (!clipboard.length) {
+    setStatus('status.pasteEmpty');
+    return;
+  }
+  pushHistory();
+  const xs = clipboard.map((c) => c.x);
+  const ys = clipboard.map((c) => c.y);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const ids = clipboard.map((c) => {
+    counters[c.type] += 1;
+    const num = counters[c.type];
+    const id = 'n' + nextId++;
+    const label = c.name != null ? c.name : nodeLabel(c.type, num);
+    const sp = snapPos({ x: worldPos.x + c.x - cx, y: worldPos.y + c.y - cy });
+    nodesDS.add({ id, type: c.type, num, name: c.name, label, ...nodeVisual(c.type), x: sp.x, y: sp.y });
+    return id;
+  });
+  network.selectNodes(ids);
+  setStatus('status.pasted', { n: ids.length });
+}
+
 /* Renumérotation : réattribue les numéros 1..N aux éléments d'un type
  * (ordre de création) ; les libellés personnalisés sont conservés. */
 function renumberType(type) {
@@ -771,6 +928,7 @@ function clearAll() {
   nextId = 1;
   anim.selected = [];
   btnAnimStart.disabled = true;
+  refresh3D();
   setStatus('status.cleared');
 }
 
@@ -867,6 +1025,10 @@ function onRightClick(p) {
       label: t('menu.groupSelection'),
       action: () => groupFromSelection(nodeId),
     });
+    items.push({
+      label: t('menu.copyNode'),
+      action: () => copyNodes([nodeId]),
+    });
     items.push({ separator: true });
     items.push({
       label: t('menu.removeNode'),
@@ -923,6 +1085,12 @@ function onRightClick(p) {
         label: t('menu.newGroup'),
         action: () => createGroupAt(wp),
       });
+      if (clipboard.length) {
+        items.push({
+          label: t('menu.paste'),
+          action: () => pasteAt(wp),
+        });
+      }
       items.push({ separator: true });
       items.push(...deviceMenuItems(world));
     }
@@ -1017,6 +1185,7 @@ function restoreState(s) {
   applyTitleState(s.title);
   anim.selected = anim.selected.filter((id) => nodesDS.get(id));
   btnAnimStart.disabled = !anim.mode || anim.selected.length < 2;
+  refresh3D();
 }
 
 function undo() {
@@ -1202,7 +1371,7 @@ function removeGroup(id) {
  * (nwse-resize) et corps de groupe (move). Un nœud/lien au pointeur garde la
  * priorité : on ne force alors aucun curseur. */
 function onStageHover(e) {
-  if (gesture || !groups.length) return;
+  if (view3d || gesture || !groups.length) return;
   const dom = domPos(e);
   if (network.getNodeAt(dom) !== undefined || network.getEdgeAt(dom) !== undefined) {
     if (stage.style.cursor === 'nwse-resize' || stage.style.cursor === 'move') stage.style.cursor = '';
@@ -1217,6 +1386,7 @@ function onStageHover(e) {
 }
 
 function onStagePointerDown(e) {
+  if (view3d) return;
   if (e.button !== 0 || e.shiftKey) return;
   const dom = domPos(e);
 
@@ -1427,7 +1597,7 @@ function importTopology(obj) {
       num,
       name,
       label: name != null ? name : nodeLabel(type, num),
-      image: DEVICE_TYPES[type].icon,
+      ...nodeVisual(type),
       x: typeof n.x === 'number' ? n.x : 0,
       y: typeof n.y === 'number' ? n.y : 0,
     });
@@ -1469,6 +1639,7 @@ function importTopology(obj) {
   }
   applyTitleState(typeof obj.title === 'string' ? obj.title : '');
   btnAnimStart.disabled = !anim.mode || anim.selected.length < 2;
+  refresh3D();
   setStatus('status.imported', { n: nodesDS.length, e: edgesDS.length });
 }
 
@@ -1595,6 +1766,231 @@ function stopAnim() {
   btnAnimStop.disabled = true;
 }
 
+/* ===== Visualisation 3D (three.js) ===== */
+/* Vue 3D en lecture seule : icônes en sprites, libellés et liens colorés ;
+ * caméra orbitale (glisser pour pivoter, molette pour zoomer, Échap pour sortir).
+ * La scène est reconstruite à chaque entrée en 3D (positions de l'instant). */
+let view3d = false;
+let threeState = null;
+
+function toggle3D() {
+  if (view3d) exit3D();
+  else enter3D();
+}
+
+function enter3D() {
+  if (!window.THREE) {
+    alert(t('dlg.no3D'));
+    return;
+  }
+  closeMenu();
+  cancelLinking();
+  cancelGesture();
+  view3d = true;
+  btn3d.classList.add('active');
+  build3D();
+  setStatus('status.view3dOn');
+}
+
+function exit3D() {
+  view3d = false;
+  btn3d.classList.remove('active');
+  dispose3D();
+  setStatus('status.view3dOff');
+}
+
+function refresh3D() {
+  if (!view3d) return;
+  dispose3D();
+  build3D();
+}
+
+/* Libellé (mono ou multiligne) rendu dans un canvas puis en sprite */
+function makeLabelSprite(text) {
+  const lines = String(text || '').split('\n');
+  const fs = 40;
+  const pad = 10;
+  const lineH = fs * 1.25;
+  const cnv = document.createElement('canvas');
+  const ctx = cnv.getContext('2d');
+  ctx.font = '600 ' + fs + 'px system-ui, sans-serif';
+  const w = Math.max(1, Math.ceil(Math.max(...lines.map((l) => ctx.measureText(l).width)))) + pad * 2;
+  const h = Math.ceil(lines.length * lineH) + pad * 2;
+  cnv.width = w;
+  cnv.height = h;
+  ctx.font = '600 ' + fs + 'px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = theme === 'dark' ? '#000000' : '#ffffff';
+  ctx.fillStyle = theme === 'dark' ? '#f1f5f9' : '#0f172a';
+  lines.forEach((l, i) => {
+    const y = pad + lineH * (i + 0.5);
+    ctx.strokeText(l, w / 2, y);
+    ctx.fillText(l, w / 2, y);
+  });
+  const tex = new THREE.CanvasTexture(cnv);
+  tex.encoding = THREE.sRGBEncoding;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  const k = 0.6; /* pixels gravés -> unités monde */
+  sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+function build3D() {
+  const r = stageRect();
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(r.width, r.height);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.domElement.id = 'gl';
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(theme === 'dark' ? '#000000' : '#ffffff');
+  const camera = new THREE.PerspectiveCamera(50, r.width / Math.max(1, r.height), 1, 50000);
+
+  const nodes = nodesDS.get();
+  let cx = 0;
+  let cy = 0;
+  let span = 600;
+  if (nodes.length) {
+    const xs = nodes.map((n) => n.x);
+    const ys = nodes.map((n) => n.y);
+    cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    span = Math.max(300, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)));
+  }
+
+  /* Nœuds : icône (sprite) + libellé en dessous ; « texte » = libellé seul */
+  const texCache = {};
+  nodes.forEach((n) => {
+    const d = DEVICE_TYPES[n.type];
+    let iconH = 0;
+    if (d && !d.textOnly) {
+      let tex = texCache[d.icon];
+      if (!tex) {
+        const img = new Image();
+        tex = new THREE.Texture(img);
+        tex.encoding = THREE.sRGBEncoding;
+        img.onload = () => {
+          tex.needsUpdate = true;
+        };
+        img.src = d.icon;
+        texCache[d.icon] = tex;
+      }
+      const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+      icon.scale.set(72, 72, 1);
+      icon.position.set(n.x - cx, -(n.y - cy), 2);
+      scene.add(icon);
+      iconH = 72;
+    }
+    const label = makeLabelSprite(n.label);
+    label.position.set(n.x - cx, -(n.y - cy) - iconH / 2 - label.scale.y / 2 - 6, 3);
+    scene.add(label);
+  });
+
+  /* Liens : bandes colorées (quads) ; pointillés via texture à répéter */
+  let dashTex = null;
+  const dashTexture = () => {
+    if (dashTex) return dashTex;
+    const c = document.createElement('canvas');
+    c.width = 32;
+    c.height = 4;
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    for (let x = 0; x < c.width; x += 8) g.fillRect(x, 0, 5, c.height);
+    dashTex = new THREE.CanvasTexture(c);
+    dashTex.wrapS = THREE.RepeatWrapping;
+    return dashTex;
+  };
+  edgesDS.get().forEach((e) => {
+    const a = nodesDS.get(e.from);
+    const b = nodesDS.get(e.to);
+    if (!a || !b) return;
+    const lt = LINK_TYPES[e.linkType] || LINK_TYPES.dashed;
+    const dx = b.x - a.x;
+    const dy = -(b.y - a.y);
+    const len = Math.hypot(dx, dy);
+    if (!len) return;
+    const mat = new THREE.MeshBasicMaterial({ color: lt.color, side: THREE.DoubleSide, transparent: true });
+    if (lt.dashes) {
+      const t = dashTexture().clone();
+      t.needsUpdate = true;
+      t.repeat.set(Math.max(1, Math.round(len / 32)), 1);
+      mat.map = t;
+    }
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(len, Math.max(2, lt.width * 1.6)), mat);
+    mesh.position.set((a.x + b.x) / 2 - cx, -((a.y + b.y) / 2 - cy), 0);
+    mesh.rotation.z = Math.atan2(dy, dx);
+    scene.add(mesh);
+  });
+
+  /* Orbite : angles sphériques autour du centre de la topologie */
+  const orbit = { theta: 0, phi: 0.9, dist: (span / 2) / Math.tan(0.435) * 1.25 + 150 };
+  const applyCam = () => {
+    const sp = Math.sin(orbit.phi);
+    camera.position.set(orbit.dist * sp * Math.sin(orbit.theta), orbit.dist * Math.cos(orbit.phi), orbit.dist * sp * Math.cos(orbit.theta));
+    camera.lookAt(0, 0, 0);
+  };
+  applyCam();
+
+  const el = renderer.domElement;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    const move = (ev) => {
+      orbit.theta -= (ev.clientX - x0) * 0.005;
+      orbit.phi = Math.min(Math.PI - 0.15, Math.max(0.15, orbit.phi - (ev.clientY - y0) * 0.005));
+      applyCam();
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    orbit.dist = Math.min(60000, Math.max(120, orbit.dist * (e.deltaY > 0 ? 1.12 : 0.9)));
+    applyCam();
+  });
+
+  threeState = { renderer, scene, texCache, stats: { nodes: nodes.length, edges: edgesDS.length }, stop: false };
+  const loop = () => {
+    if (!threeState || threeState.stop) return;
+    const rr = stageRect();
+    if (renderer.domElement.clientWidth !== rr.width || renderer.domElement.clientHeight !== rr.height) {
+      renderer.setSize(rr.width, rr.height);
+      camera.aspect = rr.width / Math.max(1, rr.height);
+      camera.updateProjectionMatrix();
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+function dispose3D() {
+  if (!threeState) return;
+  const s = threeState;
+  threeState = null;
+  s.stop = true;
+  s.scene.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      if (o.material.map) o.material.map.dispose();
+      o.material.dispose();
+    }
+  });
+  Object.values(s.texCache).forEach((t) => t.dispose());
+  s.renderer.dispose();
+  s.renderer.domElement.remove();
+}
+
 /* ===== Couche d'effets (canvas superposé, au-dessus de vis) ===== */
 function resizeFx() {
   const r = stageRect();
@@ -1614,6 +2010,7 @@ function fxLoop(ts) {
   fctx.setTransform(1, 0, 0, 1, 0, 0);
   fctx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
   fctx.restore();
+  if (view3d) return; /* la scène 3D recouvre la zone de dessin */
 
   /* Grille de calage */
   if (gridOn) drawGrid();
@@ -1827,6 +2224,7 @@ window.topoDebug = {
   history: () => ({ undo: history.undo.length, redo: history.redo.length }),
   grid: () => gridOn,
   title: () => topoTitle,
+  view3d: () => ({ active: view3d, nodes: threeState ? threeState.stats.nodes : 0, edges: threeState ? threeState.stats.edges : 0 }),
 };
 
 /* ===== Démarrage ===== */

@@ -150,6 +150,13 @@ button.danger {
   pointer-events: none;
 }
 
+/* Scène 3D (three.js) : recouvre vis et effets le temps de la visualisation */
+#gl {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
 /* ===== Barre de statut ===== */
 #statusbar {
   display: flex;
@@ -250,4 +257,59 @@ button.danger {
 
 #menu span {
   flex: 1;
+}
+
+/* ===== Dialogue texte multiligne ===== */
+#dlg {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#dlg.hidden {
+  display: none;
+}
+
+#dlg-panel {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px;
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #e2e8f0;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+#dlg-title {
+  font-size: 13px;
+}
+
+#dlg-input {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 70px;
+}
+
+#dlg-input:focus {
+  outline: none;
+  border-color: #22d3ee;
+}
+
+#dlg-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

@@ -3,7 +3,7 @@
 /*
  * Icones SVG (autonomes, en data URL) pour les éléments de la topologie :
  * switch, firewall, serveur, NAS, machine virtuelle, routeur, VM Linux,
- * VM Windows, cloud, Internet, disque dur, clé USB, imprimante, baie.
+ * VM Windows, cloud, Internet, disque dur, clé USB, imprimante, baie, texte.
  */
 (function () {
   function badge(accent, inner) {
@@ -210,6 +210,17 @@
       '<circle cx="44" cy="28.5" r="1.6"/>' +
       '<circle cx="44" cy="38.5" r="1.6"/>' +
       '<circle cx="44" cy="48.5" r="1.6"/>' +
+      '</g>'
+    )
+  );
+
+  /* Texte : lettre « T » (élément d'annotation textuelle) */
+  icons.text = toUrl(
+    badge(
+      '#e11d48',
+      '<g stroke="#e11d48" stroke-width="4" stroke-linecap="round" fill="none">' +
+      '<path d="M18 20 H46"/>' +
+      '<path d="M32 20 V48"/>' +
       '</g>'
     )
   );

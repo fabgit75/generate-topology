@@ -16,6 +16,7 @@
     <span class="sep"></span>
     <button id="btn-fit" title="Ajuster la vue à toute la topologie (F2)">Ajuster</button>
     <button id="btn-grid" title="Calage des éléments sur une grille (pas de 20 px)">Grille</button>
+    <button id="btn-3d" title="Basculer la visualisation 3D (Échap : retour en 2D)">3D</button>
     <span class="sep"></span>
     <button id="btn-save" title="Sauvegarder la topologie dans un fichier JSON">Sauvegarder JSON</button>
     <button id="btn-import" title="Importer une topologie depuis un fichier JSON">Importer JSON</button>
@@ -55,7 +56,19 @@
 <input type="file" id="file-import" accept=".json,application/json" hidden>
 <div id="menu" class="hidden"></div>
 
+<div id="dlg" class="hidden">
+  <div id="dlg-panel">
+    <label id="dlg-title" for="dlg-input"></label>
+    <textarea id="dlg-input" rows="4" spellcheck="false"></textarea>
+    <div id="dlg-actions">
+      <button id="dlg-cancel"></button>
+      <button id="dlg-ok"></button>
+    </div>
+  </div>
+</div>
+
 <script src="js/vis/vis-network.min.js"></script>
+<script src="js/three/three.min.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/app.js"></script>
 </body>
